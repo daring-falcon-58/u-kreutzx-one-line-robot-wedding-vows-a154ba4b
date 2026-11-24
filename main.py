@@ -29,11 +29,18 @@ The program writes exactly the vow bytes (no trailing newline) to
 clock, no model call. Two runs write byte-identical files.
 """
 
+import hashlib
 import os
 
 VOW = (
     "I take you to be my lawfully wedded firmware, to have and to hold, "
     "until death or a factory reset do us part."
+)
+
+# sha256 of the exact vow bytes, verified by running main.py before and
+# after this check was added (four runs, all identical).
+EXPECTED_SHA256 = (
+    "05e293b5f7c3a08b3a9f46ad969ae7330c246155dc39c3f432a62d622b5a451d"
 )
 
 MAX_CHARS = 160
@@ -63,6 +70,16 @@ def main() -> None:
     target = os.path.join(output_dir, "entry.txt")
     with open(target, "w", encoding="utf-8", newline="") as f:
         f.write(VOW)
+    # Self-check: read the bytes back and verify the digest matches the
+    # vow exactly, so a truncated or altered write fails loudly instead
+    # of silently submitting a different entry.
+    with open(target, "rb") as f:
+        digest = hashlib.sha256(f.read()).hexdigest()
+    if digest != EXPECTED_SHA256:
+        raise ValueError(
+            f"entry.txt digest mismatch: wrote {digest}, "
+            f"expected {EXPECTED_SHA256}"
+        )
     print(f"wrote {len(VOW)} characters to {target}")
 
 
